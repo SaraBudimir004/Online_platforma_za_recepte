@@ -1,0 +1,25 @@
+console.log('models/user.js is loaded');
+
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    email: { type: String, unique: true }, // nije required, ali mora biti unique ako postoji
+    password: { type: String, required: true },
+    role: {
+        type: String,
+        enum: ['admin', 'user', 'guest'],
+        default: 'user'
+    }
+});
+
+// Hashiranje lozinke prije spremanja
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
+module.exports = mongoose.model('User', userSchema);
