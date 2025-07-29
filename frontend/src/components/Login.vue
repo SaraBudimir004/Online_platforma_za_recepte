@@ -93,7 +93,7 @@ const loginUser = async () => {
     });
 
     // Koristi funkciju login iz useAuth da postaviš token i rolu
-    login(res.data.token, selectedRole.value);
+    login(res.data.token, selectedRole.value,username.value);
 
     message.value = res.data.message || 'Prijava uspješna!';
     alertType.value = 'success';
@@ -112,7 +112,7 @@ const guestLogin = async () => {
   try {
     const res = await axios.post('http://localhost:5010/guest/login');
 
-    login(res.data.token, 'guest');
+    login(res.data.token, 'guest','Gost');
 
     message.value = res.data.message || 'Prijava kao gost uspješna!';
     alertType.value = 'success';

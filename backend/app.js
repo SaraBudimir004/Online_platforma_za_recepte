@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
+const protect = require('./middlewares/authMiddleware')
 const connectDB = require('./config/dbConnection');
 connectDB();
 
@@ -13,13 +13,14 @@ const adminRouter = require('./routes/adminRoutes');
 const userRouter = require('./routes/userRoutes');
 const guestRouter = require('./routes/guestRoutes');
 const recipeRoutes = require("./routes/recipeRoutes");
+const profilUser = require("./routes/profilUserRoutes");
 
 const app = express();
 
 const cors = require('cors');
 
 app.use(cors({
-    origin: 'http://localhost:5176',
+    origin: 'http://localhost:5177',
     credentials: true,
 }));
 
@@ -30,12 +31,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serviranje uploadanih slika
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));  // <-- dodano
+app.use('/upload', express.static(path.join(__dirname, 'upload'))); // pristup uploadanim slikama
 
 app.use('/', indexRouter);
 app.use('/auth', adminRouter);
 app.use('/user', userRouter);
 app.use('/guest', guestRouter);
 app.use('/api/recipes', recipeRoutes);
+app.use('/profile', profilUser);
 
 module.exports = app;

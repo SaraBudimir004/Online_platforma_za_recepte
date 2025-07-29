@@ -84,8 +84,8 @@ export const addComment = async (req, res) => {
 // Dohvati sve recepte
 export const getAllRecipes = async (req, res) => {
     try {
-        console.log('req.user:', req.user); // Dodaj ovo da vidiš je li req.user definiran
-        const userId = req.user.id; // Ovo baca grešku ako req.user nije postavljen
+        console.log('req.user:', req.user);
+        const userId = req.user.id;
 
         const recipes = await Recipe.find()
             .populate("author", "username")
@@ -104,4 +104,47 @@ export const getAllRecipes = async (req, res) => {
         res.status(500).json({ message: "Greška pri dohvaćanju recepata." });
     }
 };
+// Dohvati recepte prijavljenog korisnika
+export const getUserRecipes = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const recipes = await Recipe.find({ author: userId })
+            .populate("author", "username")
+            .populate("comments.user", "username")
+            .sort({ createdAt: -1 })
+            .lean();
+
+
+
+        res.status(200).json(recipes);
+    } catch (error) {
+        console.error("Greška u getUserRecipes:", error);
+        res.status(500).json({ message: "Greška pri dohvaćanju korisničkih recepata." });
+    }
+};
+//Brisanje recepata
+export const deleteRecipe = async (req, res) => {
+    try {
+        const recipe = await Recipe.findById(req.params.id);
+
+        if (!recipe) {
+            return res.status(404).json({ message: "Recept nije pronađen." });
+        }
+
+        if (recipe.author.toString() !== req.user.id.toString()) {
+            return res.status(403).json({ message: "Nemate dozvolu za brisanje ovog recepta." });
+        }
+
+        // Obriši direktno po id-u
+        await Recipe.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({ message: "Recept je uspješno obrisan." });
+    } catch (error) {
+        console.error('Greška pri brisanju:', error);
+        res.status(500).json({ message: "Greška pri brisanju recepta." });
+    }
+};
+
+
 

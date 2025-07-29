@@ -6,6 +6,8 @@ const {
     toggleLikeRecipe,
     addComment,
     getAllRecipes,
+    getUserRecipes,
+    deleteRecipe
 } = require('../controllers/recipeController');
 
 const router = express.Router();
@@ -28,6 +30,12 @@ router.post('/:id/like', protect, toggleLikeRecipe);
 router.post('/:id/comment', protect, addComment);
 
 // Dohvati sve recepte
-router.get('/',protect, getAllRecipes);
+router.get('/', protect, getAllRecipes);
+
+// Dohvati recepte određenog korisnika
+router.get('/my-recipes', protect, getUserRecipes);
+
+//Brisanje recepata
+router.delete('/:id', protect, deleteRecipe);
 
 module.exports = router;
