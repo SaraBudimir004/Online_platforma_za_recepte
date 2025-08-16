@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const Recipe = require('../models/recipe');
 
 // Registracija korisnika
 exports.registerUser = async (req, res) => {
@@ -62,3 +63,20 @@ exports.loginUser = async (req, res) => {
         res.status(500).json({ message: 'Greška na serveru.' });
     }
 };
+
+
+
+exports.getUserById = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId).select('-password').lean();
+        if (!user) return res.status(404).json({ message: 'Korisnik nije pronađen' });
+
+        const recipes = await Recipe.find({ author: user._id }).lean();
+        res.json({ ...user, recipes });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Greška na serveru.' });
+    }
+};
+
+

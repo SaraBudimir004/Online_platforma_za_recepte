@@ -6,7 +6,8 @@
       </div>
 
       <div class="nav-right">
-        <div class="dropdown">
+        <!-- Ako nije gost -->
+        <div v-if="userRole !== 'guest'" class="dropdown">
           <div class="dropdown-toggle">
             <img
                 src="https://i.pinimg.com/1200x/39/e5/ce/39e5ceffa92b3b691386a20390e666c0.jpg"
@@ -20,9 +21,20 @@
             <router-link to="/profile" class="dropdown-item" custom v-slot="{ navigate }">
               <div @click="navigate" class="dropdown-item-inner">Moj profil</div>
             </router-link>
-            <div class="dropdown-item dropdown-item-inner">Broj recepata: <strong>{{ recipes.length }}</strong></div>
             <div class="dropdown-item dropdown-item-inner" @click.stop="logout">Odjava</div>
           </div>
+        </div>
+
+        <!-- Ako je gost -->
+        <div v-else>
+          <img
+              src="https://i.pinimg.com/736x/80/53/35/80533507ddc858ee867df16958669bea.jpg"
+              alt="Gost"
+              class="profile-image"
+              @click="handleGuestClick"
+              title="Registrirajte se za više funkcija"
+              style="cursor: pointer;"
+          />
         </div>
       </div>
     </div>
@@ -30,40 +42,31 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-const recipes = ref([]);
-const showDropdown = ref(false);
-
-const handleOutsideClick = (e) => {
-  if (!e.target.closest(".dropdown")) {
-    showDropdown.value = false;
+const { userRole } = defineProps({
+  userRole: {
+    type: String,
+    required: true
   }
-};
-
-onMounted(() => {
-  recipes.value = [
-    { id: 1, title: "Palačinke" },
-    { id: 2, title: "Špageti" },
-    { id: 3, title: "Rižoto" },
-  ];
-  document.addEventListener("click", handleOutsideClick);
 });
 
-onBeforeUnmount(() => {
-  document.removeEventListener("click", handleOutsideClick);
-});
-
+const showDropdown = ref(false);
+const router = useRouter();
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;
 };
 
 const logout = () => {
-  document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
   window.location.href = "http://localhost:5177/";
 };
 
+const handleGuestClick = () => {
+  alert("Registrirajte se ili prijavite se da biste mogli koristiti više funkcija.");
+  router.push('/');
+};
 </script>
 
 <style scoped>
@@ -136,19 +139,7 @@ const logout = () => {
   background-color: #f4effb;
 }
 
-
 .dropdown-item:hover {
   background-color: #f4effb;
-}
-
-.logout-btn {
-  background: none;
-  border: none;
-  color: inherit;
-  width: 100%;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
 }
 </style>

@@ -33,6 +33,12 @@
         placeholder="https://dodajSliku.com"
     />
 
+    <!-- Preview slike -->
+    <div v-if="previewImage" class="image-preview">
+      <p>Pregled odabrane slike:</p>
+      <img :src="previewImage" alt="Preview slike" />
+    </div>
+
     <button type="submit" :disabled="loading">
       {{ loading ? "Spremanje..." : "Dodaj recept" }}
     </button>
@@ -50,6 +56,7 @@ const title = ref("");
 const description = ref("");
 const imageFile = ref(null);
 const imageUrl = ref("");
+const previewImage = ref(""); // za preview slike
 const loading = ref(false);
 const error = ref("");
 const success = ref(false);
@@ -58,7 +65,14 @@ function handleFileChange(e) {
   const files = e.target.files;
   if (files.length > 0) {
     imageFile.value = files[0];
-    imageUrl.value = ""; // Resetiraj link ako se upload koristi
+    imageUrl.value = ""; // resetiraj URL input
+
+    // Napravi preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      previewImage.value = event.target.result;
+    };
+    reader.readAsDataURL(files[0]);
   }
 }
 
@@ -73,16 +87,15 @@ async function submitRecipe() {
     formData.append("description", description.value);
 
     if (imageFile.value) {
-      formData.append("image", imageFile.value);  // Ovo će backend uhvatiti kao req.file
+      formData.append("image", imageFile.value);
     } else if (imageUrl.value.trim() !== "") {
-      formData.append("imageUrl", imageUrl.value.trim());  // Ovaj koristi backend ako nema file
+      formData.append("imageUrl", imageUrl.value.trim());
     }
 
-    // Ako koristiš autentifikaciju tokenom (JWT ili slično), ubaci ga ovdje:
-    const token = localStorage.getItem("token"); // ili gdje god čuvaš token
+    const token = localStorage.getItem("token");
 
     const response = await axios.post(
-        "http://localhost:5010/api/recipes/add",
+        "http://localhost:5010/api/recipes",
         formData,
         {
           headers: {
@@ -92,13 +105,13 @@ async function submitRecipe() {
         }
     );
 
-
     success.value = true;
-    // Reset forme
+    // Reset forme i preview
     title.value = "";
     description.value = "";
     imageFile.value = null;
     imageUrl.value = "";
+    previewImage.value = "";
   } catch (err) {
     error.value = err.response?.data?.message || "Greška pri dodavanju recepta.";
   } finally {
@@ -237,5 +250,16 @@ async function submitRecipe() {
   letter-spacing: 0.02em;
 }
 
+.image-preview {
+  margin-top: 15px;
+  text-align: center;
+}
 
+.image-preview img {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 12px;
+  border: 2px solid #b58ee0;
+  object-fit: cover;
+}
 </style>

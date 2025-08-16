@@ -92,7 +92,6 @@ const loginUser = async () => {
       password: password.value,
     });
 
-    // Koristi funkciju login iz useAuth da postaviš token i rolu
     login(res.data.token, selectedRole.value,username.value);
 
     message.value = res.data.message || 'Prijava uspješna!';

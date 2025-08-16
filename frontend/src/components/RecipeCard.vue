@@ -1,14 +1,14 @@
 <template>
   <div class="recipe-card">
     <h3>{{ recipe.title }}</h3>
-    <p v-if="showAuthor" class="author-line">
+    <p v-if="showAuthor && userRole !== 'guest'" class="author-line">
       👩‍🍳 Objavio/la: <strong>{{ recipe.author?.username || 'Nepoznato' }}</strong>
     </p>
 
     <img :src="recipe.image" alt="Slika recepta" class="recipe-image" />
 
     <div class="actions">
-      <button class="like-btn" @click="toggleLike" aria-label="Like button">
+      <button v-if="userRole !== 'guest'" class="like-btn" @click="toggleLike" aria-label="Like button" >
         <svg
             xmlns="http://www.w3.org/2000/svg"
             :class="{ liked: recipe.hasLiked }"
@@ -31,7 +31,7 @@
         <span>{{ recipe.likes.length }}</span>
       </button>
 
-      <button class="comment-toggle-btn" @click="openCommentsModal">
+      <button v-if="userRole !== 'guest'" class="comment-toggle-btn" @click="openCommentsModal">
         💬 Komentari ({{ recipe.comments.length }})
       </button>
 
@@ -39,7 +39,7 @@
         📖 Pogledaj recept
       </button>
 
-      <!-- Gumb za brisanje, prikazuje se samo ako je editable true -->
+      <!-- Gumb za brisanje recepta -->
       <button v-if="editable" class="delete-btn" @click="$emit('delete', recipe._id)" title="Obriši recept">
         🗑️
       </button>
@@ -52,7 +52,16 @@
         <h4>Komentari</h4>
         <ul class="comments-list">
           <li v-for="comment in recipe.comments" :key="comment._id" class="comment-item">
-            <strong>{{ comment.user.username }}:</strong> {{ comment.text }}
+            <strong>{{ comment.user?.username || 'Nepoznato' }}:</strong> {{ comment.text }}
+            <!-- Gumb za brisanje komentara, prikazuje se samo adminu -->
+            <button
+                v-if="userRole === 'admin'"
+                class="delete-comment-btn"
+                @click="deleteComment(comment._id)"
+                title="Obriši komentar"
+            >
+              ✖
+            </button>
           </li>
         </ul>
 
@@ -76,11 +85,13 @@
 
 <script setup>
 import { ref } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
   recipe: Object,
   showAuthor: { type: Boolean, default: true },
   editable: { type: Boolean, default: false },
+  userRole: String,
 });
 
 const emit = defineEmits(['liked', 'commented', 'delete']);
@@ -90,16 +101,47 @@ const showCommentsModal = ref(false);
 const showRecipeModal = ref(false);
 
 function toggleLike() {
+  if (props.userRole === 'guest') return;
   emit('liked', props.recipe._id);
 }
 
-function submitComment() {
+async function submitComment() {
   if (commentText.value.trim() === '') return;
-  emit('commented', props.recipe._id, commentText.value);
-  commentText.value = '';
+  if (props.userRole === 'guest') return;
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Niste prijavljeni.');
+      return;
+    }
+
+    const url = `http://localhost:5010/api/recipes/${props.recipe._id}/comment`;
+
+    const response = await axios.post(
+
+        url,
+        { text: commentText.value },
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+
+    props.recipe.comments.push({
+      _id: response.data._id,
+      user: { username: response.data.user?.username || 'Ti' },
+      text: response.data.text,
+      createdAt: response.data.createdAt
+    });
+
+    commentText.value = '';
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || 'Greška pri dodavanju komentara.');
+  }
 }
 
 function openCommentsModal() {
+  if (props.userRole === 'guest') return;
   showCommentsModal.value = true;
 }
 
@@ -114,7 +156,34 @@ function openRecipeModal() {
 function closeRecipeModal() {
   showRecipeModal.value = false;
 }
+
+async function deleteComment(commentId) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Niste prijavljeni kao admin');
+      return;
+    }
+
+    const url = `http://localhost:5010/api/admin/recipe/${props.recipe._id}/comment/${commentId}`;
+
+    const response = await axios.delete(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    props.recipe.comments = props.recipe.comments.filter(c => c._id !== commentId);
+    alert(response.data.message);
+  } catch (err) {
+    console.error(err);
+    if (err.response?.status === 404) {
+      alert('Komentar ili recept nisu pronađeni.');
+    } else {
+      alert('Greška pri brisanju komentara.');
+    }
+  }
+}
 </script>
+
 
 <style scoped>
 .recipe-card {
@@ -172,7 +241,6 @@ function closeRecipeModal() {
   color: #5b2e8a;
 }
 
-/* Posebno za gumb brisanja */
 .delete-btn {
   font-size: 18px;
   padding: 6px 10px;
@@ -186,24 +254,16 @@ function closeRecipeModal() {
   color: #c0392b;
 }
 
-/* SVG srce bez obruba */
 .like-btn svg {
   transition: fill 0.3s ease;
   stroke: #8746c5;
   fill: none;
-  box-shadow: none !important;
-  outline: none !important;
-  border: none !important;
 }
 
 .like-btn svg.liked {
   fill: #8746c5;
-  box-shadow: none !important;
-  outline: none !important;
-  border: none !important;
 }
 
-/* Modal pozadina - tamna i prozirna */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -217,7 +277,6 @@ function closeRecipeModal() {
   z-index: 1000;
 }
 
-/* Modal sadržaj */
 .modal-content {
   background-color: #fff;
   max-width: 600px;
@@ -230,7 +289,6 @@ function closeRecipeModal() {
   box-shadow: 0 4px 25px rgba(0,0,0,0.2);
 }
 
-/* Zatvori dugme */
 .modal-close-btn {
   position: absolute;
   top: 10px;
@@ -243,7 +301,6 @@ function closeRecipeModal() {
   font-weight: bold;
 }
 
-/* Komentari lista */
 .comments-list {
   list-style: none;
   padding: 0;
@@ -255,6 +312,21 @@ function closeRecipeModal() {
 .comment-item {
   padding: 7px 0;
   border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-comment-btn {
+  background: transparent;
+  border: none;
+  color: red;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.delete-comment-btn:hover {
+  color: darkred;
 }
 
 .comment-input {

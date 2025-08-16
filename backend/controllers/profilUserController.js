@@ -3,7 +3,7 @@ const UserProfile = require('../models/profilUser');
 // GET profil korisnika
 exports.getUserProfile = async (req, res) => {
     try {
-        const profile = await UserProfile.findOne({ userId: req.user._id });
+        const profile = await UserProfile.findOne({ userId: req.user.id });
         res.json(profile || {});
     } catch (error) {
         res.status(500).json({ message: 'Greška pri dohvaćanju profila' });
@@ -15,7 +15,7 @@ exports.updateUserProfile = async (req, res) => {
     try {
         const { fullName, birthYear, city, contactEmail, bio } = req.body;
 
-        let profile = await UserProfile.findOne({ userId: req.user._id });
+        let profile = await UserProfile.findOne({ userId: req.user.id });
 
         if (profile) {
             // update
@@ -28,7 +28,7 @@ exports.updateUserProfile = async (req, res) => {
         } else {
             // create
             profile = new UserProfile({
-                userId: req.user._id,
+                userId: req.user.id,
                 fullName,
                 birthYear,
                 city,

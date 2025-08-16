@@ -1,7 +1,9 @@
-import Recipe from "../models/recipe.js";
+const Recipe = require("../models/recipe.js");
+const multer = require('multer');
+const path = require('path');
 
 // Dodavanje recepta
-export const addRecipe = async (req, res) => {
+const addRecipe = async (req, res) => {
     try {
         const { title, description, imageUrl } = req.body;
 
@@ -10,7 +12,7 @@ export const addRecipe = async (req, res) => {
         }
 
         // Ako postoji fajl, koristi ga, inače koristi link slike ako je poslan
-        const image = req.file ? "/uploads/" + req.file.filename : imageUrl || null;
+        const image = req.file ? "/upload/" + req.file.filename : imageUrl || null;
 
         const author = req.user.id;
 
@@ -30,7 +32,7 @@ export const addRecipe = async (req, res) => {
 };
 
 // Lajkanje ili un-lajkanje recepta
-export const toggleLikeRecipe = async (req, res) => {
+const toggleLikeRecipe = async (req, res) => {
     try {
         const recipe = await Recipe.findById(req.params.id);
         if (!recipe) return res.status(404).json({ message: "Recept nije pronađen." });
@@ -53,7 +55,7 @@ export const toggleLikeRecipe = async (req, res) => {
 };
 
 // Dodavanje komentara na recept
-export const addComment = async (req, res) => {
+const addComment = async (req, res) => {
     try {
         const recipe = await Recipe.findById(req.params.id);
         if (!recipe) return res.status(404).json({ message: "Recept nije pronađen." });
@@ -74,7 +76,10 @@ export const addComment = async (req, res) => {
         recipe.comments.push(comment);
         await recipe.save();
 
-        res.status(201).json(comment);
+        const savedComment = await recipe.populate('comments.user', 'username');
+        const newComment = savedComment.comments[savedComment.comments.length - 1];
+
+        res.status(201).json(newComment);
     } catch (error) {
         console.error("Greška u addComment:", error);
         res.status(500).json({ message: "Greška pri dodavanju komentara." });
@@ -82,30 +87,35 @@ export const addComment = async (req, res) => {
 };
 
 // Dohvati sve recepte
-export const getAllRecipes = async (req, res) => {
+const getAllRecipes = async (req, res) => {
     try {
-        console.log('req.user:', req.user);
-        const userId = req.user.id;
-
         const recipes = await Recipe.find()
             .populate("author", "username")
             .populate("comments.user", "username")
             .sort({ createdAt: -1 })
             .lean();
 
-        const recipesWithLikes = recipes.map(recipe => ({
-            ...recipe,
-            hasLiked: recipe.likes.some(likeUserId => likeUserId.toString() === userId)
-        }));
+        if (req.user && req.user.role !== 'guest' && req.user.id) {
+            const userId = req.user.id.toString();
+            const recipesWithLikes = recipes.map(recipe => ({
+                ...recipe,
+                hasLiked: Array.isArray(recipe.likes) && recipe.likes.some(
+                    likeUserId => likeUserId != null && likeUserId.toString() === userId
+                )
+            }));
 
-        res.json(recipesWithLikes);
+            return res.json(recipesWithLikes);
+        }
+
+        return res.json(recipes);
     } catch (error) {
         console.error("Greška u getAllRecipes:", error);
         res.status(500).json({ message: "Greška pri dohvaćanju recepata." });
     }
 };
+
 // Dohvati recepte prijavljenog korisnika
-export const getUserRecipes = async (req, res) => {
+const getUserRecipes = async (req, res) => {
     try {
         const userId = req.user.id;
 
@@ -115,16 +125,15 @@ export const getUserRecipes = async (req, res) => {
             .sort({ createdAt: -1 })
             .lean();
 
-
-
         res.status(200).json(recipes);
     } catch (error) {
         console.error("Greška u getUserRecipes:", error);
         res.status(500).json({ message: "Greška pri dohvaćanju korisničkih recepata." });
     }
 };
-//Brisanje recepata
-export const deleteRecipe = async (req, res) => {
+
+// Brisanje recepta
+const deleteRecipe = async (req, res) => {
     try {
         const recipe = await Recipe.findById(req.params.id);
 
@@ -136,9 +145,7 @@ export const deleteRecipe = async (req, res) => {
             return res.status(403).json({ message: "Nemate dozvolu za brisanje ovog recepta." });
         }
 
-        // Obriši direktno po id-u
         await Recipe.findByIdAndDelete(req.params.id);
-
         res.status(200).json({ message: "Recept je uspješno obrisan." });
     } catch (error) {
         console.error('Greška pri brisanju:', error);
@@ -146,5 +153,43 @@ export const deleteRecipe = async (req, res) => {
     }
 };
 
+// Dohvati recepte po ID-u korisnika
+const getRecipesByUserId = async (req, res) => {
+    try {
+        const userId = req.params.userId;
 
+        const recipes = await Recipe.find({ author: userId })
+            .populate("author", "username")
+            .populate("comments.user", "username")
+            .sort({ createdAt: -1 })
+            .lean();
 
+        res.status(200).json(recipes);
+    } catch (error) {
+        console.error("Greška u getRecipesByUserId:", error);
+        res.status(500).json({ message: "Greška pri dohvaćanju recepata korisnika." });
+    }
+};
+// Gdje će se spremati slike
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'upload/'); // folder u kojem će se slike čuvati
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
+
+module.exports = {
+    addRecipe,
+    toggleLikeRecipe,
+    addComment,
+    getAllRecipes,
+    getUserRecipes,
+    deleteRecipe,
+    getRecipesByUserId,
+    upload
+};

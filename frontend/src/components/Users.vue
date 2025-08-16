@@ -1,5 +1,5 @@
 <template>
-  <NavigationBar/>
+  <NavigationBar :userRole="role"/>
 
   <div class="search-bar">
     <input
@@ -15,6 +15,7 @@
         v-for="recipe in paginatedRecipes"
         :key="recipe._id"
         :recipe="recipe"
+        :userRole="role"
         @liked="handleLike"
         @commented="handleComment"
     />
@@ -56,7 +57,7 @@ import { useAuth } from '../localstore.js';
 import NavigationBar from "@/components/NavigationBar.vue";
 
 const recipes = ref([]);
-const { token } = useAuth();
+const { token, role } = useAuth();
 
 const searchQuery = ref('');
 const currentPage = ref(1);
@@ -64,24 +65,39 @@ const pageSize = 9;
 
 async function fetchRecipes() {
   try {
+    const headers = token.value
+        ? { Authorization: `Bearer ${token.value}` }
+        : {}; // prazan objekt ako nema tokena
+
     const res = await axios.get('http://localhost:5010/api/recipes', {
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
+      headers
     });
-    // Sortiraj po datumu - najnoviji prvi
+
     recipes.value = res.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   } catch (err) {
     console.error('Greška pri dohvatu recepata:', err);
   }
 }
 
+// Prilagodba recepata da gost ne vidi lajkove i komentare
+const displayRecipes = computed(() => {
+  if (role.value === 'guest') {
+    return recipes.value.map(recipe => ({
+      ...recipe,
+      likes: [],
+      comments: [],
+      hasLiked: false,
+    }));
+  }
+  return recipes.value;
+});
+
 const filteredRecipes = computed(() => {
-  if (!searchQuery.value.trim()) return recipes.value;
+  if (!searchQuery.value.trim()) return displayRecipes.value;
 
   const q = searchQuery.value.toLowerCase();
 
-  return recipes.value.filter(recipe => {
+  return displayRecipes.value.filter(recipe => {
     const titleMatch = recipe.title?.toLowerCase().includes(q);
     const authorName = recipe.author?.username?.toLowerCase() || '';
     const authorMatch = authorName.includes(q);
@@ -97,7 +113,10 @@ const paginatedRecipes = computed(() => {
   return filteredRecipes.value.slice(start, end);
 });
 
+// Gost ne može lajkat
 async function handleLike(recipeId) {
+  if (role.value === 'guest') return;  // gost ne može lajkat
+
   try {
     await axios.post(`http://localhost:5010/api/recipes/${recipeId}/like`, {}, {
       headers: {
@@ -110,7 +129,10 @@ async function handleLike(recipeId) {
   }
 }
 
+// Gost ne može komentirati
 async function handleComment(recipeId, commentText) {
+  if (role.value === 'guest') return;  // gost ne može komentirati
+
   try {
     await axios.post(`http://localhost:5010/api/recipes/${recipeId}/comment`, { text: commentText }, {
       headers: {

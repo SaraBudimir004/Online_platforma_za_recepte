@@ -12,8 +12,9 @@ const routes = [
     { path: '/admin', name: 'Admin', component: Admin },
     { path: '/user', name: 'Users', component: Users },
     { path: '/profile', name: 'Profile', component: Profile },
-
-
+    { path: '/user/:id', name: 'UserProfile',
+        component: () => import('@/components/Profile.vue')
+    }
 ];
 
 const router = createRouter({

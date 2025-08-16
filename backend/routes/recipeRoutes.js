@@ -7,35 +7,27 @@ const {
     addComment,
     getAllRecipes,
     getUserRecipes,
-    deleteRecipe
+    deleteRecipe,
+    getRecipesByUserId
 } = require('../controllers/recipeController');
 
 const router = express.Router();
 
-// Postavljanje multer storage-a za slike
+// Multer storage za slike
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
+    destination: (req, file, cb) => cb(null, 'upload/'),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
 });
 
 const upload = multer({ storage });
 
-// Dodavanje recepta (može upload slike ili link slike)
-router.post('/add', protect, upload.single('image'), addRecipe);
-
-// Lajkanje recepta
-router.post('/:id/like', protect, toggleLikeRecipe);
-
-// Dodavanje komentara
-router.post('/:id/comment', protect, addComment);
-
-// Dohvati sve recepte
+// Rute
 router.get('/', protect, getAllRecipes);
-
-// Dohvati recepte određenog korisnika
+router.post('/', protect, upload.single('image'), addRecipe);
+router.post('/:id/like', protect, toggleLikeRecipe);
+router.post('/:id/comment', protect, addComment);
 router.get('/my-recipes', protect, getUserRecipes);
-
-//Brisanje recepata
+router.get('/user/:userId', getRecipesByUserId);
 router.delete('/:id', protect, deleteRecipe);
 
 module.exports = router;
