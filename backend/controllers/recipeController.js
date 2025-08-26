@@ -11,9 +11,11 @@ const addRecipe = async (req, res) => {
             return res.status(400).json({ message: "Naslov i opis su obavezni." });
         }
 
-        // Ako postoji fajl, koristi ga, inače koristi link slike ako je poslan
-        const image = req.file ? "/upload/" + req.file.filename : imageUrl || null;
-
+        // Koristi file ili link slike
+        if (!req.file && !imageUrl) {
+            return res.status(400).json({ message: "Slika je obavezna." });
+        }
+        const image = req.file ? "/upload/" + req.file.filename : imageUrl;
         const author = req.user.id;
 
         const newRecipe = new Recipe({
@@ -31,7 +33,7 @@ const addRecipe = async (req, res) => {
     }
 };
 
-// Lajkanje ili un-lajkanje recepta
+// Un/Lajkanje recepta
 const toggleLikeRecipe = async (req, res) => {
     try {
         const recipe = await Recipe.findById(req.params.id);
@@ -54,7 +56,7 @@ const toggleLikeRecipe = async (req, res) => {
     }
 };
 
-// Dodavanje komentara na recept
+// Pisanje komentara za recept
 const addComment = async (req, res) => {
     try {
         const recipe = await Recipe.findById(req.params.id);
@@ -152,28 +154,10 @@ const deleteRecipe = async (req, res) => {
         res.status(500).json({ message: "Greška pri brisanju recepta." });
     }
 };
-
-// Dohvati recepte po ID-u korisnika
-const getRecipesByUserId = async (req, res) => {
-    try {
-        const userId = req.params.userId;
-
-        const recipes = await Recipe.find({ author: userId })
-            .populate("author", "username")
-            .populate("comments.user", "username")
-            .sort({ createdAt: -1 })
-            .lean();
-
-        res.status(200).json(recipes);
-    } catch (error) {
-        console.error("Greška u getRecipesByUserId:", error);
-        res.status(500).json({ message: "Greška pri dohvaćanju recepata korisnika." });
-    }
-};
 // Gdje će se spremati slike
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'upload/'); // folder u kojem će se slike čuvati
+        cb(null, 'upload/');
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -190,6 +174,5 @@ module.exports = {
     getAllRecipes,
     getUserRecipes,
     deleteRecipe,
-    getRecipesByUserId,
     upload
 };

@@ -26,6 +26,7 @@
         @change="handleFileChange"
         accept="image/*"
     />
+
     <p>ili unesi URL slike:</p>
     <input
         type="text"
@@ -80,6 +81,13 @@ async function submitRecipe() {
   error.value = "";
   success.value = "";
   loading.value = true;
+
+  // Provjera da postoji barem jedan izvor slike
+  if (!imageFile.value && imageUrl.value.trim() === "") {
+    error.value = "Molimo dodajte sliku ili unesite URL slike.";
+    loading.value = false;
+    return;
+  }
 
   try {
     const formData = new FormData();

@@ -11,7 +11,7 @@ exports.registerUser = async (req, res) => {
         return res.status(400).json({ message: 'Email je obavezan.' });
     }
 
-    // Regularni izraz za provjeru da email završava na gmail.com i ima ispravan oblik
+    // Email završava na gmail.com
     const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Email mora biti valjan i završavati na gmail.com' });
@@ -63,8 +63,6 @@ exports.loginUser = async (req, res) => {
         res.status(500).json({ message: 'Greška na serveru.' });
     }
 };
-
-
 
 exports.getUserById = async (req, res) => {
     try {

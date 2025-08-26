@@ -27,5 +27,5 @@ function isLoggedIn() {
 }
 
 export function useAuth() {
-    return { token, role, username, login, logout, isLoggedIn };
+    return { token, role, username, login, isLoggedIn };
 }

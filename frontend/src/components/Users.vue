@@ -185,7 +185,7 @@ onMounted(() => {
 /* Responzivnost za manje ekrane */
 @media (max-width: 600px) {
   .search-bar {
-    max-width: 70%; /* zauzima skoro cijelu širinu ekrana */
+    max-width: 70%;
     margin: 15px auto 25px;
   }
 

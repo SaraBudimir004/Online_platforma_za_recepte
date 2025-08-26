@@ -8,7 +8,6 @@ const {
     getAllRecipes,
     getUserRecipes,
     deleteRecipe,
-    getRecipesByUserId
 } = require('../controllers/recipeController');
 
 const router = express.Router();
@@ -27,7 +26,6 @@ router.post('/', protect, upload.single('image'), addRecipe);
 router.post('/:id/like', protect, toggleLikeRecipe);
 router.post('/:id/comment', protect, addComment);
 router.get('/my-recipes', protect, getUserRecipes);
-router.get('/user/:userId', getRecipesByUserId);
 router.delete('/:id', protect, deleteRecipe);
 
 module.exports = router;

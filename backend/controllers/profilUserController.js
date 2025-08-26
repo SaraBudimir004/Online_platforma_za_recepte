@@ -1,6 +1,6 @@
 const UserProfile = require('../models/profilUser');
 
-// GET profil korisnika
+// Profil korisnika
 exports.getUserProfile = async (req, res) => {
     try {
         const profile = await UserProfile.findOne({ userId: req.user.id });
@@ -10,7 +10,7 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
-// POST ili PUT - spremanje profila
+// Spremanje profila
 exports.updateUserProfile = async (req, res) => {
     try {
         const { fullName, birthYear, city, contactEmail, bio } = req.body;

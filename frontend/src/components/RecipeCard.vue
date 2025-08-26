@@ -1,11 +1,11 @@
 <template>
   <div class="recipe-card">
     <h3>{{ recipe.title }}</h3>
-    <p v-if="showAuthor && userRole !== 'guest'" class="author-line">
+    <p v-if="showAuthor && userRole !== 'guest' && userRole !== 'admin'" class="author-line">
       👩‍🍳 Objavio/la: <strong>{{ recipe.author?.username || 'Nepoznato' }}</strong>
     </p>
 
-    <img :src="recipe.image" alt="Slika recepta" class="recipe-image" />
+    <img :src="getImageUrl(recipe.image)" alt="Slika recepta" class="recipe-image" />
 
     <div class="actions">
       <button v-if="userRole !== 'guest'" class="like-btn" @click="toggleLike" aria-label="Like button" >
@@ -39,7 +39,6 @@
         📖 Pogledaj recept
       </button>
 
-      <!-- Gumb za brisanje recepta -->
       <button v-if="editable" class="delete-btn" @click="$emit('delete', recipe._id)" title="Obriši recept">
         🗑️
       </button>
@@ -53,7 +52,6 @@
         <ul class="comments-list">
           <li v-for="comment in recipe.comments" :key="comment._id" class="comment-item">
             <strong>{{ comment.user?.username || 'Nepoznato' }}:</strong> {{ comment.text }}
-            <!-- Gumb za brisanje komentara, prikazuje se samo adminu -->
             <button
                 v-if="userRole === 'admin'"
                 class="delete-comment-btn"
@@ -77,7 +75,7 @@
       <div class="modal-content">
         <button class="modal-close-btn" @click="closeRecipeModal">✖</button>
         <h4>Detalji recepta:</h4>
-        <p>{{ recipe.description }}</p>
+        <p class="recipe-description">{{ recipe.description }}</p>
       </div>
     </div>
   </div>
@@ -119,12 +117,10 @@ async function submitComment() {
     const url = `http://localhost:5010/api/recipes/${props.recipe._id}/comment`;
 
     const response = await axios.post(
-
         url,
         { text: commentText.value },
         { headers: { Authorization: `Bearer ${token}` } }
     );
-
 
     props.recipe.comments.push({
       _id: response.data._id,
@@ -165,7 +161,7 @@ async function deleteComment(commentId) {
       return;
     }
 
-    const url = `http://localhost:5010/api/admin/recipe/${props.recipe._id}/comment/${commentId}`;
+    const url = `http://localhost:5010/auth/recipe/${props.recipe._id}/comment/${commentId}`;
 
     const response = await axios.delete(url, {
       headers: { Authorization: `Bearer ${token}` }
@@ -182,8 +178,13 @@ async function deleteComment(commentId) {
     }
   }
 }
-</script>
 
+function getImageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `http://localhost:5010${path}`;
+}
+</script>
 
 <style scoped>
 .recipe-card {
@@ -197,7 +198,9 @@ async function deleteComment(commentId) {
 }
 
 .recipe-image {
-  max-width: 100%;
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
   border-radius: 10px;
   margin-bottom: 14px;
   border: 2px solid #e4c3fa;
@@ -355,4 +358,27 @@ async function deleteComment(commentId) {
 .comment-input button:hover {
   background-color: #a05dd8;
 }
+.recipe-description {
+  white-space: pre-wrap; /* Čuva razmake i prijelome linija */
+  word-wrap: break-word;
+}
+@media (max-width: 480px) {
+  .actions {
+    flex-wrap: wrap;       /* dopušta dugmadima da se prelamaju */
+    gap: 8px;              /* manji razmak između dugmadi */
+  }
+
+  .like-btn,
+  .comment-toggle-btn,
+  .recipe-toggle-btn,
+  .delete-btn {
+    font-size: 13px;       /* smanji font na malim ekranima */
+    padding: 5px 10px;     /* smanji padding */
+  }
+
+  .delete-btn {
+    color: #e74c3c;
+  }
+}
+
 </style>

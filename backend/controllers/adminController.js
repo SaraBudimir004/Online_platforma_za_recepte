@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/user');
 const Recipe = require('../models/recipe');
 const bcrypt = require('bcrypt');
@@ -36,18 +37,6 @@ exports.getAllUsers = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Greška pri dohvatu korisnika" });
-    }
-};
-
-// Dohvat top recepata
-exports.getTopRecipes = async (req, res) => {
-    try {
-        const topRecipes = await Recipe.find().populate("author", "username").lean();
-        topRecipes.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
-        res.json(topRecipes.slice(0, 5));
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Greška pri dohvatu recepata" });
     }
 };
 
@@ -95,5 +84,30 @@ exports.adminDeleteComment = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Greška pri brisanju komentara" });
+    }
+};
+
+// Brisanje korisnika i svih njegovih recepata
+exports.adminDeleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Provjera validnosti ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Neispravan ID korisnika" });
+        }
+
+        const objectId = new mongoose.Types.ObjectId(id);
+
+        // Briše korisnika
+        const user = await User.findByIdAndDelete(objectId);
+        if (!user) return res.status(404).json({ message: "Korisnik nije pronađen" });
+
+        // Briše sve recepte korisnika
+        await Recipe.deleteMany({ author: objectId });
+
+        res.json({ message: "Korisnik i njegovi recepti su obrisani." });
+    } catch (err) {
+        console.error("Greška pri brisanju korisnika:", err);
+        res.status(500).json({ message: "Greška pri brisanju korisnika i recepata." });
     }
 };
